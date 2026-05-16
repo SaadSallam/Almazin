@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../core/responsive/responsive_context.dart';
+import '../../core/theme/almazin_theme_tokens.dart';
+import '../../core/theme/app_spacing.dart';
 import 'app_search_field.dart';
 
+/// Premium top bar component inspired by HeroUI Uber theme
+/// Clean header with proper spacing and desktop optimization
 class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   const AppTopBar({
     super.key,
@@ -26,24 +30,30 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final tokens = Theme.of(context).extension<AlmazinThemeTokens>()!;
     final isDesktop = context.isDesktop;
 
     return AppBar(
-      titleSpacing: 16,
+      titleSpacing: AppSpacing.lg,
       title: Text(
         title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: scheme.onSurface,
+              fontWeight: FontWeight.w600,
+              color: tokens.textPrimary,
+              fontSize: 18,
+              letterSpacing: -0.3,
             ),
       ),
       actions: [
         if (showDesktopSearch && isDesktop)
           Padding(
-            padding: const EdgeInsetsDirectional.only(end: 8, top: 8, bottom: 8),
+            padding: const EdgeInsetsDirectional.only(
+              end: AppSpacing.lg,
+              top: AppSpacing.md,
+              bottom: AppSpacing.md,
+            ),
             child: SizedBox(
               width: 320,
               child: AppSearchField(
@@ -62,7 +72,11 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
                   : Icons.view_agenda_outlined,
             ),
           ),
-        ...actions,
+        ...actions.map((action) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+              child: action,
+            )),
+        const SizedBox(width: AppSpacing.sm),
       ],
     );
   }

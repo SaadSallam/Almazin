@@ -3,29 +3,33 @@ import 'package:flutter/material.dart';
 import 'almazin_theme_tokens.dart';
 import 'app_colors.dart';
 import 'app_fonts.dart';
+import 'app_radius.dart';
+import 'app_spacing.dart';
 
-/// Builds [ThemeData] for light and dark appearance using [AppColors] + [AlmazinThemeTokens].
+/// Premium [ThemeData] matching HeroUI Uber theme
+/// Grayscale-driven, neutral elegance, desktop-first
 abstract final class AppTheme {
   static ThemeData light() {
     final tokens = AlmazinThemeTokens.light;
     final colorScheme = ColorScheme(
       brightness: Brightness.light,
-      primary: tokens.goldAccent,
-      onPrimary: AppColors.lightOnGold,
-      primaryContainer: AppColors.lightGoldMuted.withValues(alpha: 0.35),
-      onPrimaryContainer: AppColors.lightOnSurface,
-      secondary: tokens.brownAccent,
-      onSecondary: Colors.white,
-      secondaryContainer: AppColors.lightSurfaceContainer,
-      onSecondaryContainer: AppColors.lightOnSurface,
-      surface: tokens.card,
-      onSurface: AppColors.lightOnSurface,
-      surfaceContainerHighest: AppColors.lightSurfaceContainer,
-      onSurfaceVariant: AppColors.lightOnSurfaceMuted,
+      primary: tokens.primary, // Deep charcoal
+      onPrimary: tokens.onPrimary, // White
+      primaryContainer: tokens.primarySubtle,
+      onPrimaryContainer: tokens.textPrimary,
+      secondary: tokens.secondary,
+      onSecondary: AppColors.white,
+      secondaryContainer: AppColors.lightBrownSubtle,
+      onSecondaryContainer: tokens.textPrimary,
+      surface: tokens.surfaceDefault,
+      onSurface: tokens.textPrimary,
+      surfaceContainerHighest: tokens.surfaceContainer,
+      onSurfaceVariant: tokens.textSecondary,
       outline: AppColors.lightOutline,
+      outlineVariant: AppColors.lightOutlineMuted,
       shadow: tokens.shadow,
-      scrim: AppColors.lightShadow.withValues(alpha: 0.35),
-      error: AppColors.lightError,
+      scrim: AppColors.lightShadow.withValues(alpha: 0.2),
+      error: tokens.errorColor,
       onError: AppColors.lightOnError,
     );
 
@@ -40,22 +44,23 @@ abstract final class AppTheme {
     final tokens = AlmazinThemeTokens.dark;
     final colorScheme = ColorScheme(
       brightness: Brightness.dark,
-      primary: tokens.goldAccent,
-      onPrimary: AppColors.darkOnGold,
-      primaryContainer: AppColors.darkGoldMuted.withValues(alpha: 0.35),
-      onPrimaryContainer: AppColors.darkOnSurface,
-      secondary: tokens.brownAccent,
-      onSecondary: AppColors.darkOnSurface,
-      secondaryContainer: AppColors.darkSurfaceContainer,
-      onSecondaryContainer: AppColors.darkOnSurface,
-      surface: tokens.card,
-      onSurface: AppColors.darkOnSurface,
-      surfaceContainerHighest: AppColors.darkSurfaceContainer,
-      onSurfaceVariant: AppColors.darkOnSurfaceMuted,
+      primary: tokens.primary, // Soft white
+      onPrimary: tokens.onPrimary, // Deep charcoal
+      primaryContainer: tokens.primarySubtle,
+      onPrimaryContainer: tokens.textPrimary,
+      secondary: tokens.secondary,
+      onSecondary: tokens.textPrimary,
+      secondaryContainer: AppColors.darkBrownSubtle,
+      onSecondaryContainer: tokens.textPrimary,
+      surface: tokens.surfaceDefault,
+      onSurface: tokens.textPrimary,
+      surfaceContainerHighest: tokens.surfaceContainer,
+      onSurfaceVariant: tokens.textSecondary,
       outline: AppColors.darkOutline,
+      outlineVariant: AppColors.darkOutlineMuted,
       shadow: tokens.shadow,
-      scrim: AppColors.darkShadow.withValues(alpha: 0.55),
-      error: AppColors.darkError,
+      scrim: AppColors.darkShadow.withValues(alpha: 0.4),
+      error: tokens.errorColor,
       onError: AppColors.darkOnError,
     );
 
@@ -78,15 +83,18 @@ abstract final class AppTheme {
       fontFamily: AppFonts.family,
       scaffoldBackgroundColor: tokens.canvas,
       extensions: <ThemeExtension<dynamic>>[tokens],
-      dividerTheme: DividerThemeData(color: tokens.divider, thickness: 1),
+      dividerTheme: DividerThemeData(
+        color: tokens.divider,
+        thickness: 1,
+        space: 0,
+      ),
       shadowColor: tokens.shadow,
     );
 
-    final cardShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(14),
-    );
-
     return base.copyWith(
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // TYPOGRAPHY
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       textTheme: base.textTheme.apply(
         fontFamily: AppFonts.family,
         bodyColor: colorScheme.onSurface,
@@ -97,33 +105,53 @@ abstract final class AppTheme {
         bodyColor: colorScheme.onPrimary,
         displayColor: colorScheme.onPrimary,
       ),
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // INPUT FIELDS
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.65),
+        fillColor: brightness == Brightness.light
+            ? AppColors.lightSurfaceContainer.withValues(alpha: 0.5)
+            : AppColors.darkSurfaceContainer.withValues(alpha: 0.5),
         labelStyle: TextStyle(
           fontFamily: AppFonts.family,
           color: colorScheme.onSurfaceVariant,
+          fontSize: 13,
         ),
         hintStyle: TextStyle(
           fontFamily: AppFonts.family,
-          color: colorScheme.onSurfaceVariant,
+          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+          fontSize: 13,
         ),
         floatingLabelStyle: WidgetStateTextStyle.resolveWith((_) {
-          return TextStyle(fontFamily: AppFonts.family);
+          return TextStyle(
+            fontFamily: AppFonts.family,
+            color: colorScheme.primary,
+            fontSize: 12,
+          );
         }),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.45)),
+          borderRadius: AppRadius.input,
+          borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.4)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.35)),
+          borderRadius: AppRadius.input,
+          borderSide: BorderSide(color: colorScheme.outline.withValues(alpha: 0.3)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.input,
           borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
         ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
       ),
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // APP BAR
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       appBarTheme: AppBarTheme(
         centerTitle: true,
         elevation: 0,
@@ -137,45 +165,87 @@ abstract final class AppTheme {
           fontWeight: FontWeight.w600,
         ),
       ),
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // CARDS
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       cardTheme: CardThemeData(
-        color: tokens.card,
-        elevation: brightness == Brightness.light ? 0 : 0,
+        color: tokens.surfaceDefault,
+        elevation: 0,
         shadowColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
-        shape: cardShape,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.card),
         margin: EdgeInsets.zero,
       ),
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // BUTTONS — Uber style: charcoal primary, neutral secondary
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          elevation: brightness == Brightness.light ? 1 : 0,
-          shadowColor: tokens.shadow,
+          elevation: 0,
+          shadowColor: Colors.transparent,
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
           textStyle: TextStyle(
             fontFamily: AppFonts.family,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.md,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.button),
         ),
       ),
+
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: colorScheme.primary,
-          side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.55)),
+          elevation: 0,
+          foregroundColor: colorScheme.onSurface,
+          side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.5)),
           textStyle: TextStyle(
             fontFamily: AppFonts.family,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.md,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.button),
         ),
       ),
-      dialogTheme: DialogThemeData(
-        backgroundColor: tokens.card,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: colorScheme.onSurface,
+          textStyle: TextStyle(
+            fontFamily: AppFonts.family,
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+        ),
       ),
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // DIALOGS
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      dialogTheme: DialogThemeData(
+        backgroundColor: tokens.surfaceDefault,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.dialog),
+        elevation: 0,
+      ),
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // SNACK BARS
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       snackBarTheme: SnackBarThemeData(
         backgroundColor: colorScheme.inverseSurface,
         contentTextStyle: base.textTheme.bodyMedium?.copyWith(
@@ -183,7 +253,44 @@ abstract final class AppTheme {
           color: colorScheme.onInverseSurface,
         ),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.card),
+        elevation: 0,
+      ),
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // TOOLTIPS
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: brightness == Brightness.light
+              ? AppColors.lightOnSurface.withValues(alpha: 0.9)
+              : AppColors.darkOnSurface.withValues(alpha: 0.9),
+          borderRadius: AppRadius.tooltip,
+        ),
+        textStyle: TextStyle(
+          fontFamily: AppFonts.family,
+          color: brightness == Brightness.light
+              ? AppColors.lightSurface
+              : AppColors.darkCanvas,
+          fontSize: 12,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+      ),
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // CHIPS
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      chipTheme: ChipThemeData(
+        backgroundColor: tokens.surfaceContainer,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.chip),
+        labelPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+        ),
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.3)),
       ),
     );
   }

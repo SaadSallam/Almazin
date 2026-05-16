@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../core/navigation/app_nav.dart';
+import '../../core/theme/app_radius.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/theme/theme_tokens_x.dart';
 
+/// Premium sidebar component inspired by HeroUI Uber theme
+/// Clean, professional desktop navigation with branded logo
 class AppSidebar extends StatelessWidget {
   const AppSidebar({
     super.key,
@@ -19,29 +23,21 @@ class AppSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final tokens = context.almazinTokens;
 
     return Material(
-      color: scheme.surface,
+      color: tokens.surfaceDefault,
       child: SafeArea(
         left: false,
         right: false,
         child: Container(
           width: width,
           decoration: BoxDecoration(
-            color: scheme.surface,
+            color: tokens.surfaceDefault,
             border: BorderDirectional(
-              start: BorderSide(color: tokens.divider.withValues(alpha: 0.55)),
+              start: BorderSide(color: tokens.divider.withValues(alpha: 0.4)),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: tokens.shadow.withValues(alpha: 0.08),
-                blurRadius: 18,
-                offset: const Offset(-6, 0),
-              ),
-            ],
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
@@ -49,20 +45,32 @@ class AppSidebar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
+                  ),
                   child: Row(
                     children: [
-                      Icon(Icons.local_cafe, color: scheme.primary, size: 26),
+                      ClipRRect(
+                        borderRadius: AppRadius.radiusSm,
+                        child: Image.asset(
+                          'assets/icon_app.png',
+                          width: 32,
+                          height: 32,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                       if (expanded) ...[
-                        const SizedBox(width: 10),
+                        const SizedBox(width: AppSpacing.md),
                         Expanded(
                           child: Text(
-                            'المازن',
+                            'بن المــــازن',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.2,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.3,
+                              fontSize: 18,
                             ),
                           ),
                         ),
@@ -70,12 +78,12 @@ class AppSidebar extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Expanded(
                   child: ListView.separated(
                     physics: const BouncingScrollPhysics(),
                     itemCount: AppNavItem.main.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 6),
+                    separatorBuilder: (_, _) => const SizedBox(height: 4),
                     itemBuilder: (context, index) {
                       final item = AppNavItem.main[index];
                       final active = isNavPathActive(selectedPath, item.path);
@@ -91,12 +99,13 @@ class AppSidebar extends StatelessWidget {
                 ),
                 if (expanded)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 10, 8, 6),
+                    padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
                     child: Text(
                       'Almazin App',
                       textAlign: TextAlign.center,
                       style: textTheme.labelSmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
+                        color: tokens.textTertiary,
+                        fontSize: 11,
                       ),
                     ),
                   ),
@@ -107,7 +116,6 @@ class AppSidebar extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class AppNavigationDrawer extends StatelessWidget {
@@ -194,7 +202,8 @@ class _SidebarDestinationTile extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_SidebarDestinationTile> createState() => _SidebarDestinationTileState();
+  State<_SidebarDestinationTile> createState() =>
+      _SidebarDestinationTileState();
 }
 
 class _SidebarDestinationTileState extends State<_SidebarDestinationTile> {
@@ -207,56 +216,56 @@ class _SidebarDestinationTileState extends State<_SidebarDestinationTile> {
     final tokens = context.almazinTokens;
 
     final Color bg = widget.active
-        ? scheme.primary.withValues(alpha: 0.12)
+        ? tokens.surfaceActive
         : _hovering
-            ? scheme.primary.withValues(alpha: 0.06)
-            : Colors.transparent;
+        ? scheme.surfaceContainerHighest.withValues(alpha: 0.3)
+        : Colors.transparent;
 
-    final Color fg = widget.active ? scheme.primary : scheme.onSurface;
-
-    final borderColor = widget.active
-        ? scheme.primary.withValues(alpha: 0.35)
-        : tokens.divider.withValues(alpha: 0.25);
+    final Color fg = widget.active ? scheme.primary : tokens.textPrimary;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovering = true),
       onExit: (_) => setState(() => _hovering = false),
       cursor: SystemMouseCursors.click,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: const Duration(milliseconds: 120),
         curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: borderColor),
-          boxShadow: widget.active
-              ? [
-                  BoxShadow(
-                    color: tokens.shadow.withValues(alpha: 0.10),
-                    blurRadius: 14,
-                    offset: const Offset(0, 8),
-                    spreadRadius: -10,
-                  ),
-                ]
-              : const [],
+          borderRadius: AppRadius.radiusMd,
+          border: widget.active
+              ? Border.all(color: scheme.primary.withValues(alpha: 0.15))
+              : null,
         ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: AppRadius.radiusMd,
             onTap: widget.onTap,
-            splashColor: scheme.primary.withValues(alpha: 0.10),
-            hoverColor: scheme.primary.withValues(alpha: 0.04),
+            splashColor: scheme.primary.withValues(alpha: 0.06),
+            highlightColor: Colors.transparent,
             child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: widget.expanded ? 12 : 10,
-                vertical: 12,
+                vertical: 10,
               ),
               child: Row(
                 children: [
-                  Icon(widget.icon, color: fg, size: 22),
+                  // Active indicator dot
+                  if (widget.active && widget.expanded) ...[
+                    Container(
+                      width: 4,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: scheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Icon(widget.icon, color: fg, size: 20),
                   if (widget.expanded) ...[
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         widget.label,
@@ -264,7 +273,10 @@ class _SidebarDestinationTileState extends State<_SidebarDestinationTile> {
                         overflow: TextOverflow.ellipsis,
                         style: textTheme.titleSmall?.copyWith(
                           color: fg,
-                          fontWeight: widget.active ? FontWeight.w800 : FontWeight.w600,
+                          fontWeight: widget.active
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                          fontSize: 14,
                         ),
                       ),
                     ),

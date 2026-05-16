@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:almazin_app/core/theme/almazin_theme_tokens.dart';
+import 'package:almazin_app/core/theme/app_spacing.dart';
 import 'package:almazin_app/features/customers/presentation/cubit/customer_detail_cubit.dart';
 import 'package:almazin_app/features/customers/presentation/cubit/customer_detail_state.dart';
 import 'package:almazin_app/features/customers/presentation/widgets/customer_blend_section.dart';
 import 'package:almazin_app/features/customers/presentation/widgets/customer_profile_section.dart';
 import 'package:almazin_app/features/customers/presentation/widgets/customer_weight_calculator_section.dart';
+import 'package:almazin_app/shared/widgets/app_states.dart';
 import 'package:almazin_app/shared/widgets/dashboard_page.dart';
 
 class CustomerDetailPage extends StatelessWidget {
@@ -35,34 +38,21 @@ class CustomerDetailPage extends StatelessWidget {
           }
 
           if (state.status == CustomerDetailStatus.notFound) {
-            return Center(
-              child: Text(
-                'العميل غير موجود',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+            return const AppEmptyState(
+              message: 'العميل غير موجود',
+              icon: Icons.person_off_rounded,
             );
           }
 
           if (state.status == CustomerDetailStatus.failure) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(state.errorMessage ?? 'حدث خطأ', textAlign: TextAlign.center),
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: () => context.read<CustomerDetailCubit>().load(),
-                      child: const Text('إعادة المحاولة'),
-                    ),
-                  ],
-                ),
-              ),
+            return AppErrorState(
+              message: state.errorMessage ?? 'حدث خطأ',
+              onRetry: () => context.read<CustomerDetailCubit>().load(),
             );
           }
 
           final name = state.customer?.name ?? '';
+          final tokens = Theme.of(context).extension<AlmazinThemeTokens>()!;
 
           return DashboardPage(
             child: Column(
@@ -71,10 +61,12 @@ class CustomerDetailPage extends StatelessWidget {
                 Text(
                   name,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
+                        color: tokens.textPrimary,
+                        letterSpacing: -0.3,
                       ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 FocusTraversalGroup(
                   child: Column(
                     children: const [

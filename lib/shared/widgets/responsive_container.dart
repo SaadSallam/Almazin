@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../core/responsive/responsive_context.dart';
+import '../../core/theme/app_spacing.dart';
 
 /// Horizontally padded content with a max width for large screens.
+/// Optimized for desktop-first layout with proper spacing
 class ResponsiveContainer extends StatelessWidget {
   const ResponsiveContainer({
     super.key,
     required this.child,
-    this.maxWidth = 1240,
+    this.maxWidth = AppSpacing.maxWidthDesktop,
     this.alignment = Alignment.topCenter,
   });
 
@@ -17,12 +19,21 @@ class ResponsiveContainer extends StatelessWidget {
 
   EdgeInsets _padding(BuildContext context) {
     if (context.isMobile) {
-      return const EdgeInsets.symmetric(horizontal: 16, vertical: 16);
+      return const EdgeInsets.symmetric(
+        horizontal: AppSpacing.contentPaddingMobile,
+        vertical: AppSpacing.lg,
+      );
     }
     if (context.isTablet) {
-      return const EdgeInsets.symmetric(horizontal: 22, vertical: 20);
+      return const EdgeInsets.symmetric(
+        horizontal: AppSpacing.contentPaddingTablet,
+        vertical: AppSpacing.xl,
+      );
     }
-    return const EdgeInsets.symmetric(horizontal: 28, vertical: 24);
+    return const EdgeInsets.symmetric(
+      horizontal: AppSpacing.contentPaddingDesktop,
+      vertical: AppSpacing.xxl,
+    );
   }
 
   @override
@@ -45,7 +56,7 @@ class ResponsiveMaxWidth extends StatelessWidget {
   const ResponsiveMaxWidth({
     super.key,
     required this.child,
-    this.maxWidth = 1240,
+    this.maxWidth = AppSpacing.maxWidthDesktop,
   });
 
   final Widget child;

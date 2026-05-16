@@ -5,13 +5,17 @@ import 'package:go_router/go_router.dart';
 
 import 'package:almazin_app/core/keyboard/app_shortcuts.dart';
 import 'package:almazin_app/core/navigation/app_paths.dart';
+import 'package:almazin_app/core/responsive/responsive_context.dart';
+import 'package:almazin_app/core/theme/app_spacing.dart';
 import 'package:almazin_app/features/customers/presentation/cubit/customers_list_cubit.dart';
 import 'package:almazin_app/features/customers/presentation/cubit/customers_list_state.dart';
 import 'package:almazin_app/features/customers/presentation/widgets/customer_card.dart';
 import 'package:almazin_app/features/customers/presentation/widgets/customer_editor_dialog.dart';
+import 'package:almazin_app/shared/widgets/app_button.dart';
 import 'package:almazin_app/shared/widgets/app_confirm_dialog.dart';
 import 'package:almazin_app/shared/widgets/app_search_field.dart';
 import 'package:almazin_app/shared/widgets/app_section.dart';
+import 'package:almazin_app/shared/widgets/app_states.dart';
 import 'package:almazin_app/shared/widgets/dashboard_page.dart';
 
 class CustomersPage extends StatefulWidget {
@@ -32,6 +36,8 @@ class _CustomersPageState extends State<CustomersPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = context.isDesktop;
+
     return BlocListener<CustomersListCubit, CustomersListState>(
       listenWhen: (previous, current) =>
           previous.snackbarMessage != current.snackbarMessage &&
@@ -45,20 +51,22 @@ class _CustomersPageState extends State<CustomersPage> {
         }
       },
       child: Scaffold(
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () async {
-            final result = await showCustomerEditorDialog(context: context);
-            if (!context.mounted || result == null) return;
-            await context.read<CustomersListCubit>().createCustomer(
-                  name: result.name,
-                  phone: result.phone,
-                  address: result.address,
-                  notes: result.notes,
-                );
-          },
-          icon: const Icon(Icons.person_add_outlined),
-          label: const Text('إضافة عميل'),
-        ),
+        floatingActionButton: isDesktop
+            ? null // Use inline button on desktop
+            : FloatingActionButton.extended(
+                onPressed: () async {
+                  final result = await showCustomerEditorDialog(context: context);
+                  if (!context.mounted || result == null) return;
+                  await context.read<CustomersListCubit>().createCustomer(
+                        name: result.name,
+                        phone: result.phone,
+                        address: result.address,
+                        notes: result.notes,
+                      );
+                },
+                icon: const Icon(Icons.person_add_outlined),
+                label: const Text('إضافة عميل'),
+              ),
         body: BlocBuilder<CustomersListCubit, CustomersListState>(
           buildWhen: (a, b) =>
               a.status != b.status ||
@@ -72,21 +80,9 @@ class _CustomersPageState extends State<CustomersPage> {
             }
 
             if (state.status == CustomersListStatus.failure && state.customers.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(state.errorMessage ?? 'حدث خطأ', textAlign: TextAlign.center),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: () => context.read<CustomersListCubit>().load(),
-                        child: const Text('إعادة المحاولة'),
-                      ),
-                    ],
-                  ),
-                ),
+              return AppErrorState(
+                message: state.errorMessage ?? 'حدث خطأ',
+                onRetry: () => context.read<CustomersListCubit>().load(),
               );
             }
 
@@ -112,23 +108,43 @@ class _CustomersPageState extends State<CustomersPage> {
                         AppSection(
                           title: 'العملاء',
                           subtitle: 'إدارة العملاء وتوليفاتهم المحفوظة كنسب مئوية.',
+                          trailing: isDesktop
+                              ? AppButton(
+                                  label: 'إضافة عميل',
+                                  icon: Icons.person_add_outlined,
+                                  variant: AppButtonVariant.primary,
+                                  onPressed: () async {
+                                    final result = await showCustomerEditorDialog(context: context);
+                                    if (!context.mounted || result == null) return;
+                                    await context.read<CustomersListCubit>().createCustomer(
+                                          name: result.name,
+                                          phone: result.phone,
+                                          address: result.address,
+                                          notes: result.notes,
+                                        );
+                                  },
+                                )
+                              : null,
                           child: const SizedBox.shrink(),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: AppSpacing.md),
                         AppSearchField(
                           focusNode: _searchFocusNode,
                           onChanged: context.read<CustomersListCubit>().setQuery,
                           hintText: 'ابحث بالاسم أو الهاتف…',
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: AppSpacing.lg),
                         if (visible.isEmpty)
-                          const _CustomersEmpty()
+                          const AppEmptyState(
+                            message: 'لا يوجد عملاء\nأضف عميلاً جديداً ثم عيّن توليفته من صفحة التفاصيل.',
+                            icon: Icons.people_outline_rounded,
+                          )
                         else
                           ListView.separated(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             itemCount: visible.length,
-                            separatorBuilder: (_, _) => const SizedBox(height: 12),
+                            separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
                             itemBuilder: (context, index) {
                               final customer = visible[index];
                               return CustomerCard(
@@ -154,44 +170,6 @@ class _CustomersPageState extends State<CustomersPage> {
               ),
             );
           },
-        ),
-      ),
-    );
-  }
-}
-
-class _CustomersEmpty extends StatelessWidget {
-  const _CustomersEmpty();
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 28),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest.withValues(alpha: 0.25),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'لا يوجد عملاء',
-                style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'أضف عميلاً جديداً ثم عيّن توليفته من صفحة التفاصيل.',
-                style: textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-            ],
-          ),
         ),
       ),
     );

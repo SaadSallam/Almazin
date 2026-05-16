@@ -9,8 +9,10 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../../../core/backup/backup_service.dart';
 import '../../../core/storage/app_storage.dart';
 import '../../../core/theme/almazin_theme_tokens.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/theme_tokens_x.dart';
 import '../../../shared/widgets/app_button.dart';
+import '../../../shared/widgets/app_confirm_dialog.dart';
 import '../../../shared/widgets/app_section.dart';
 import '../../../shared/widgets/dashboard_page.dart';
 import '../../theme/presentation/cubit/theme_cubit.dart';
@@ -24,7 +26,8 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool _isBackupLoading = false;
+  bool _isExportLoading = false;
+  bool _isImportLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -40,24 +43,10 @@ class _SettingsPageState extends State<SettingsPage> {
             subtitle: 'إعدادات التطبيق العامة',
             child: const SizedBox.shrink(),
           ),
-          const SizedBox(height: 14),
-          Text(
-            'المظهر',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'اختر وضع العرض. يُحفظ اختيارك محلياً ويُستعاد بعد تحديث الصفحة.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  height: 1.35,
-                ),
-          ),
-          const SizedBox(height: 16),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
+          const SizedBox(height: AppSpacing.xxl),
+          AppSection(
+            title: 'المظهر',
+            subtitle: 'اختر وضع العرض. يُحفظ اختيارك محلياً ويُستعاد بعد تحديث الصفحة.',
             child: BlocBuilder<ThemeCubit, ThemeState>(
               buildWhen: (a, b) => a.themeMode != b.themeMode,
               builder: (context, state) {
@@ -72,44 +61,31 @@ class _SettingsPageState extends State<SettingsPage> {
               },
             ),
           ),
-          const SizedBox(height: 28),
-          Text(
-            'النسخ الاحتياطي',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
+          const SizedBox(height: AppSpacing.xxl),
+          AppSection(
+            title: 'النسخ الاحتياطي',
+            subtitle: 'صدّر بيانات التطبيق كملف JSON احتياطي، أو استرجعها من نسخة سابقة.',
+            child: Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                AppButton(
+                  label: 'تصدير نسخة احتياطية',
+                  icon: Icons.file_upload_outlined,
+                  variant: AppButtonVariant.secondary,
+                  isLoading: _isExportLoading,
+                  onPressed: _isExportLoading ? null : _onExport,
                 ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'صدّر بيانات التطبيق كملف JSON احتياطي، أو استرجعها من نسخة سابقة.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  height: 1.35,
+                AppButton(
+                  label: 'استيراد نسخة احتياطية',
+                  icon: Icons.file_download_outlined,
+                  variant: AppButtonVariant.primary,
+                  isLoading: _isImportLoading,
+                  onPressed: _isImportLoading ? null : _onImport,
                 ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              AppButton(
-                label: 'تصدير نسخة احتياطية',
-                icon: Icons.file_upload_outlined,
-                variant: AppButtonVariant.secondary,
-                onPressed: _isBackupLoading ? null : _onExport,
-              ),
-              AppButton(
-                label: 'استيراد نسخة احتياطية',
-                icon: Icons.file_download_outlined,
-                variant: AppButtonVariant.primary,
-                onPressed: _isBackupLoading ? null : _onImport,
-              ),
-            ],
-          ),
-          if (_isBackupLoading) ...[
-            const SizedBox(height: 14),
-            const LinearProgressIndicator(minHeight: 3),
-          ],
         ],
       ),
     );
@@ -123,7 +99,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _onExport() async {
-    setState(() => _isBackupLoading = true);
+    setState(() => _isExportLoading = true);
     try {
       final service = _createService();
       final jsonString = await service.exportBackup();
@@ -146,53 +122,58 @@ class _SettingsPageState extends State<SettingsPage> {
         SnackBar(content: Text('حدث خطأ أثناء التصدير: $e')),
       );
     } finally {
-      if (mounted) setState(() => _isBackupLoading = false);
+      if (mounted) setState(() => _isExportLoading = false);
     }
   }
 
   Future<void> _onImport() async {
-    final result = await FilePicker.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['json'],
-      withData: true,
-    );
-    if (result == null || result.files.isEmpty) return;
-
-    final file = result.files.single;
-    String jsonString;
+    setState(() => _isImportLoading = true);
     try {
-      jsonString = utf8.decode(file.bytes!);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر قراءة الملف: $e')),
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+        withData: true,
       );
-      return;
-    }
+      if (result == null || result.files.isEmpty) return;
 
-    final service = _createService();
-    final validation = service.validate(jsonString);
-    if (!validation.isValid) {
+      final file = result.files.single;
+      String jsonString;
+      try {
+        jsonString = utf8.decode(file.bytes!);
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تعذر قراءة الملف: $e')),
+        );
+        return;
+      }
+
+      final service = _createService();
+      final validation = service.validate(jsonString);
+      if (!validation.isValid) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(validation.errorMessage ?? 'الملف غير صالح'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+        return;
+      }
+
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(validation.errorMessage ?? 'الملف غير صالح'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
+      final confirmed = await showAppConfirmDialog(
+        context: context,
+        title: 'استيراد نسخة احتياطية',
+        message: 'سيتم استبدال البيانات الحالية بما يلي:\n'
+            '• ${validation.summary!.customerCount} عميل\n'
+            '• ${validation.summary!.coffeeCount} صنف بن\n\n'
+            'هل تريد المتابعة؟',
+        confirmLabel: 'تأكيد الاستيراد',
+        cancelLabel: 'إلغاء',
       );
-      return;
-    }
+      if (confirmed != true) return;
 
-    if (!mounted) return;
-    final confirmed = await _showConfirmDialog(
-      context,
-      coffeeCount: validation.summary!.coffeeCount,
-      customerCount: validation.summary!.customerCount,
-    );
-    if (confirmed != true) return;
-
-    setState(() => _isBackupLoading = true);
-    try {
       final importResult = await service.importBackup(jsonString);
       if (!importResult.isValid) {
         if (!mounted) return;
@@ -223,39 +204,8 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       );
     } finally {
-      if (mounted) setState(() => _isBackupLoading = false);
+      if (mounted) setState(() => _isImportLoading = false);
     }
-  }
-
-  Future<bool?> _showConfirmDialog(
-    BuildContext dialogContext, {
-    required int coffeeCount,
-    required int customerCount,
-  }) {
-    return showDialog<bool>(
-      context: dialogContext,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('استيراد نسخة احتياطية'),
-          content: Text(
-            'سيتم استبدال البيانات الحالية بما يلي:\n'
-            '• $customerCount عميل\n'
-            '• $coffeeCount صنف بن\n\n'
-            'هل تريد المتابعة؟',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('إلغاء'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('تأكيد الاستيراد'),
-            ),
-          ],
-        );
-      },
-    );
   }
 }
 

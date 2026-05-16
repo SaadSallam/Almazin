@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:almazin_app/core/theme/almazin_theme_tokens.dart';
+import 'package:almazin_app/core/theme/app_spacing.dart';
 import 'package:almazin_app/features/calculator/presentation/cubit/direct_weight_calculator_cubit.dart';
 import 'package:almazin_app/features/calculator/presentation/cubit/direct_weight_calculator_state.dart';
 import 'package:almazin_app/features/calculator/presentation/widgets/calculator_line_row.dart';
@@ -8,6 +10,7 @@ import 'package:almazin_app/features/calculator/presentation/widgets/calculator_
 import 'package:almazin_app/features/calculator/presentation/widgets/save_percentage_blend_dialog.dart';
 import 'package:almazin_app/shared/widgets/app_button.dart';
 import 'package:almazin_app/shared/widgets/app_section.dart';
+import 'package:almazin_app/shared/widgets/app_states.dart';
 import 'package:almazin_app/shared/widgets/dashboard_page.dart';
 
 class CalculatorPage extends StatelessWidget {
@@ -42,25 +45,14 @@ class CalculatorPage extends StatelessWidget {
 
           if (state.status == DirectWeightCalculatorStatus.failure &&
               state.coffees.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(state.errorMessage ?? 'حدث خطأ', textAlign: TextAlign.center),
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: () => context.read<DirectWeightCalculatorCubit>().loadCoffees(),
-                      child: const Text('إعادة المحاولة'),
-                    ),
-                  ],
-                ),
-              ),
+            return AppErrorState(
+              message: state.errorMessage ?? 'حدث خطأ',
+              onRetry: () => context.read<DirectWeightCalculatorCubit>().loadCoffees(),
             );
           }
 
           final cubit = context.read<DirectWeightCalculatorCubit>();
+          final tokens = Theme.of(context).extension<AlmazinThemeTokens>()!;
 
           return DashboardPage(
             child: Column(
@@ -72,14 +64,14 @@ class CalculatorPage extends StatelessWidget {
                       'أدخل أوزان كل صنف بالجرام (وليس بالنسب). يتم الحساب فوراً من أسعار الكيلو المحفوظة في «أسعار البن».',
                   child: const SizedBox.shrink(),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
                   children: [
                     AppButton(
                       label: 'إضافة صنف',
-                      icon: Icons.add,
+                      icon: Icons.add_rounded,
                       variant: AppButtonVariant.primary,
                       onPressed: cubit.addLine,
                     ),
@@ -95,14 +87,18 @@ class CalculatorPage extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.lg),
                 CalculatorSummaryCard(result: state.result),
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.lg),
                 Text(
                   'الأسطر',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: tokens.textPrimary,
+                        fontSize: 14,
+                      ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.sm),
                 for (final line in state.lines) ...[
                   CalculatorLineRow(
                     lineId: line.id,
@@ -114,7 +110,7 @@ class CalculatorPage extends StatelessWidget {
                     onWeightChanged: (raw) => cubit.setWeightInput(line.id, raw),
                     onRemove: () => cubit.removeLine(line.id),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: AppSpacing.sm),
                 ],
               ],
             ),
