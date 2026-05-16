@@ -73,7 +73,7 @@ jobs:
       - name: Verify build output
         shell: pwsh
         run: |
-          $releasePath = "build/windows/runner/Release"
+          $releasePath = "build/windows/x64/runner/Release"
           Write-Host "Checking for build output at: $releasePath"
 
           # List entire build/windows tree for debugging
@@ -93,7 +93,7 @@ jobs:
       - name: Zip build output
         shell: pwsh
         run: |
-          $sourcePath = "build/windows/runner/Release"
+          $sourcePath = "build/windows/x64/runner/Release"
           $zipPath = "windows-exe.zip"
 
           Write-Host "Packaging: $sourcePath → $zipPath"
