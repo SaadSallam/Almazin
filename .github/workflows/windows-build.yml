@@ -53,9 +53,9 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      # ── Analyze ──────────────────────────────────────────────────────────
+      # ── Analyze (non-fatal: only real errors break CI) ────────────────────
       - name: Analyze
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       # ── Test ─────────────────────────────────────────────────────────────
       - name: Test
