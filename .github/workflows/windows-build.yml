@@ -40,7 +40,8 @@ jobs:
           cache: true
 
       - name: Flutter doctor
-        run: flutter doctor
+        shell: pwsh
+        run: flutter doctor -v
 
       # ── Enable Windows Desktop ───────────────────────────────────────────
       - name: Enable Windows Desktop support
@@ -60,13 +61,59 @@ jobs:
 
       # ── Build ────────────────────────────────────────────────────────────
       - name: Build Windows release
-        run: flutter build windows --release
+        shell: pwsh
+        run: |
+          flutter build windows --release
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Flutter Windows build failed with exit code $LASTEXITCODE"
+            exit 1
+          }
+
+      # ── Verify build output exists ───────────────────────────────────────
+      - name: Verify build output
+        shell: pwsh
+        run: |
+          $releasePath = "build/windows/runner/Release"
+          Write-Host "Checking for build output at: $releasePath"
+
+          # List entire build/windows tree for debugging
+          Write-Host "`n=== build/windows/ directory tree ==="
+          Get-ChildItem -Path build/windows -Recurse -Directory | Select-Object -ExpandProperty FullName
+
+          if (-not (Test-Path $releasePath)) {
+            Write-Error "Windows build output missing at $releasePath — build failed silently"
+            exit 1
+          }
+
+          Write-Host "`n=== Build output contents ==="
+          Get-ChildItem -Path $releasePath | Select-Object Name, Length, LastWriteTime
+          Write-Host "`nBuild verification passed ✓"
 
       # ── Package ──────────────────────────────────────────────────────────
       - name: Zip build output
         shell: pwsh
         run: |
-          Compress-Archive -Path build/windows/runner/Release/* -DestinationPath windows-exe.zip
+          $sourcePath = "build/windows/runner/Release"
+          $zipPath = "windows-exe.zip"
+
+          Write-Host "Packaging: $sourcePath → $zipPath"
+          Compress-Archive -Path "$sourcePath\*" -DestinationPath $zipPath -Force
+
+          if (-not (Test-Path $zipPath)) {
+            Write-Error "Failed to create $zipPath"
+            exit 1
+          }
+
+          $size = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
+          Write-Host "Created $zipPath ($size MB) ✓"
+
+      # ── Upload artifact (fallback if release creation fails) ──────────────
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: almazin-windows-exe
+          path: windows-exe.zip
+          retention-days: 30
 
       # ── Version ──────────────────────────────────────────────────────────
       - name: Determine release version
