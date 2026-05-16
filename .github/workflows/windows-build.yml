@@ -1,43 +1,120 @@
-name: Build Flutter Windows EXE
+# =============================================================================
+# Almazin App — Windows Build & Release
+#
+# Triggers:
+#   - Push to main   → builds EXE, creates nightly Release with unique tag
+#   - Tag v*.*.*     → builds EXE, creates versioned stable Release
+#
+# Output:
+#   - windows-exe.zip uploaded as a Release asset
+#   - Every push to main → downloadable EXE via Releases
+# =============================================================================
+
+name: Windows Build & Release
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      # ── Checkout ──────────────────────────────────────────────────────────
+      - uses: actions/checkout@v4
 
-      - name: Set up Java (required by Flutter)
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+      # ── Git long paths (prevents "path too long" on Windows runners) ─────
+      - name: Enable git long paths
+        run: git config --system core.longpaths true
 
-      - name: Setup Flutter SDK
+      # ── Flutter SDK ───────────────────────────────────────────────────────
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
-      - name: Verify Flutter installation
+      - name: Flutter doctor
         run: flutter doctor
 
-      - name: Enable Windows Desktop
+      # ── Enable Windows Desktop ───────────────────────────────────────────
+      - name: Enable Windows Desktop support
         run: flutter config --enable-windows-desktop
 
+      # ── Dependencies ─────────────────────────────────────────────────────
       - name: Get dependencies
         run: flutter pub get
 
+      # ── Analyze ──────────────────────────────────────────────────────────
+      - name: Analyze
+        run: flutter analyze
+
+      # ── Test ─────────────────────────────────────────────────────────────
+      - name: Test
+        run: flutter test
+
+      # ── Build ────────────────────────────────────────────────────────────
       - name: Build Windows release
         run: flutter build windows --release
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+      # ── Package ──────────────────────────────────────────────────────────
+      - name: Zip build output
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build/windows/runner/Release/* -DestinationPath windows-exe.zip
+
+      # ── Version ──────────────────────────────────────────────────────────
+      - name: Determine release version
+        id: version
+        shell: pwsh
+        run: |
+          $ref = "${{ github.ref }}"
+          if ($ref -match "^refs/tags/v") {
+            $tag = "${{ github.ref_name }}"
+            $name = "Almazin App $tag"
+            $prerelease = "false"
+          } else {
+            $date = Get-Date -Format "yyyyMMdd-HHmmss"
+            $sha = "${{ github.sha }}".Substring(0, 7)
+            $tag = "nightly-$date"
+            $name = "Almazin App · Nightly · $sha · $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+            $prerelease = "true"
+          }
+          echo "tag=$tag"         >> $env:GITHUB_OUTPUT
+          echo "name=$name"       >> $env:GITHUB_OUTPUT
+          echo "prerelease=$prerelease" >> $env:GITHUB_OUTPUT
+
+      # ── Release ─────────────────────────────────────────────────────────
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: windows-exe
-          path: build/windows/runner/Release
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.name }}
+          body: |
+            ## Almazin App — Windows Build
+
+            | Field | Value |
+            |-------|-------|
+            | Branch | `${{ github.ref_name }}` |
+            | Commit | ${{ github.sha }} |
+            | Build  | ${{ steps.version.outputs.name }} |
+
+            ### 📥 Download
+            - [`windows-exe.zip`](./windows-exe.zip) — Portable Windows executable
+
+            ### ⚙️ Requirements
+            - Windows 10+ (64-bit)
+            - [Microsoft Visual C++ Redistributable](https://aka.ms/vcredist)
+            - No installation required — unzip and run `almazin_app.exe`
+
+            ### 💾 Local Data
+            - Customer records, coffee prices, and blends stored locally via Hive
+            - Use **Settings → Backup** to export/import JSON backups
+          files: windows-exe.zip
+          draft: false
+          prerelease: ${{ steps.version.outputs.prerelease }}
