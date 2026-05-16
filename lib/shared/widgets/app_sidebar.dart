@@ -64,7 +64,7 @@ class AppSidebar extends StatelessWidget {
                         const SizedBox(width: AppSpacing.md),
                         Expanded(
                           child: Text(
-                            'بن المــــازن',
+                            'المازن',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: textTheme.titleLarge?.copyWith(
