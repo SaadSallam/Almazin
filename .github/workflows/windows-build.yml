@@ -2,12 +2,12 @@
 # Almazin App — Windows Build & Release
 #
 # Triggers:
-#   - Push to main   → builds EXE, creates nightly Release with unique tag
-#   - Tag v*.*.*     → builds EXE, creates versioned stable Release
+#   - Push to main   → nightly release (prerelease)
+#   - Tag v*.*.*     → stable release (Latest)
 #
 # Output:
-#   - windows-exe.zip uploaded as a Release asset
-#   - Every push to main → downloadable EXE via Releases
+#   - Almazin-App-{version}-windows-x64.zip
+#   - Professional GitHub Release with structured notes
 # =============================================================================
 
 name: Windows Build & Release
@@ -27,8 +27,10 @@ jobs:
     steps:
       # ── Checkout ──────────────────────────────────────────────────────────
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      # ── Git long paths (prevents "path too long" on Windows runners) ─────
+      # ── Git long paths ───────────────────────────────────────────────────
       - name: Enable git long paths
         run: git config --system core.longpaths true
 
@@ -69,14 +71,12 @@ jobs:
             exit 1
           }
 
-      # ── Verify build output exists ───────────────────────────────────────
+      # ── Verify build output ──────────────────────────────────────────────
       - name: Verify build output
         shell: pwsh
         run: |
           $releasePath = "build/windows/x64/runner/Release"
-          Write-Host "Checking for build output at: $releasePath"
 
-          # List entire build/windows tree for debugging
           Write-Host "`n=== build/windows/ directory tree ==="
           Get-ChildItem -Path build/windows -Recurse -Directory | Select-Object -ExpandProperty FullName
 
@@ -89,14 +89,34 @@ jobs:
           Get-ChildItem -Path $releasePath | Select-Object Name, Length, LastWriteTime
           Write-Host "`nBuild verification passed ✓"
 
-      # ── Package ──────────────────────────────────────────────────────────
-      - name: Zip build output
+      # ── Version & Artifact Name ──────────────────────────────────────────
+      - name: Determine release version
+        id: version
         shell: pwsh
         run: |
-          $sourcePath = "build/windows/x64/runner/Release"
-          $zipPath = "windows-exe.zip"
+          $ref = "${{ github.ref }}"
 
-          Write-Host "Packaging: $sourcePath → $zipPath"
+          if ($ref -match "^refs/tags/v") {
+            $tag = "${{ github.ref_name }}"
+            $name = "Almazin App $tag"
+            $artifactName = "Almazin-App-${tag}-windows-x64.zip"
+            $prerelease = "false"
+            $releaseType = "Stable Release"
+          } else {
+            $date = Get-Date -Format "yyyyMMdd-HHmm"
+            $sha = "${{ github.sha }}".Substring(0, 7)
+            $tag = "nightly-$date"
+            $name = "Almazin App · Nightly · $sha"
+            $artifactName = "Almazin-App-nightly-$date-windows-x64.zip"
+            $prerelease = "true"
+            $releaseType = "Nightly Build"
+          }
+
+          $buildTime = Get-Date -Format "yyyy-MM-dd HH:mm UTC"
+          $zipPath = $artifactName
+
+          # Package
+          $sourcePath = "build/windows/x64/runner/Release"
           Compress-Archive -Path "$sourcePath\*" -DestinationPath $zipPath -Force
 
           if (-not (Test-Path $zipPath)) {
@@ -105,63 +125,91 @@ jobs:
           }
 
           $size = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
-          Write-Host "Created $zipPath ($size MB) ✓"
 
-      # ── Upload artifact (fallback if release creation fails) ──────────────
+          echo "tag=$tag"               >> $env:GITHUB_OUTPUT
+          echo "name=$name"             >> $env:GITHUB_OUTPUT
+          echo "artifact=$artifactName" >> $env:GITHUB_OUTPUT
+          echo "zipPath=$zipPath"       >> $env:GITHUB_OUTPUT
+          echo "zipSize=$size"          >> $env:GITHUB_OUTPUT
+          echo "buildTime=$buildTime"   >> $env:GITHUB_OUTPUT
+          echo "releaseType=$releaseType" >> $env:GITHUB_OUTPUT
+          echo "prerelease=$prerelease" >> $env:GITHUB_OUTPUT
+
+          Write-Host "`nPackaged: $zipPath ($size MB) ✓"
+
+      # ── Generate Changelog ───────────────────────────────────────────────
+      - name: Generate changelog
+        id: changelog
+        shell: pwsh
+        run: |
+          $sha = "${{ github.sha }}".Substring(0, 7)
+          $ref = "${{ github.ref_name }}"
+          $tag = "${{ steps.version.outputs.tag }}"
+          $buildTime = "${{ steps.version.outputs.buildTime }}"
+          $zipSize = "${{ steps.version.outputs.zipSize }}"
+          $releaseType = "${{ steps.version.outputs.releaseType }}"
+
+          # Get recent commits
+          $commits = git log --oneline -20 2>$null | Out-String
+
+          # Build release notes
+          $notes = @"
+          ## $releaseType
+
+          ### 📦 Build Info
+
+          | Field | Value |
+          |-------|-------|
+          | Version | \`$tag\` |
+          | Platform | Windows x64 |
+          | Build Time | $buildTime |
+          | Commit | \`$sha\` |
+          | Branch | \`$ref\` |
+          | Package Size | $zipSize MB |
+
+          ### 📥 Download
+
+          - **File:** \`${{ steps.version.outputs.artifact }}\`
+          - **Contents:** Portable Windows executable — no installation required
+
+          ### ⚠️ Requirements
+
+          - Windows 10 or Windows 11 (64-bit)
+          - [Microsoft Visual C++ Redistributable](https://aka.ms/vcredist)
+          - No additional installation required — unzip and run \`almazin_app.exe\`
+
+          ### 💾 Local Data & Backup
+
+          - All data (customers, prices, blends) stored locally via Hive
+          - Use **Settings → Backup** to export/import JSON backups
+          - No cloud sync — your data stays on your machine
+
+          ### 📋 Recent Changes
+
+          \`\`\`
+          $commits
+          \`\`\`
+          "@
+
+          # Write to file for release action
+          $notes | Out-File -FilePath release-notes.md -Encoding utf8
+          Write-Host "Release notes generated ✓"
+
+      # ── Upload artifact (fallback) ───────────────────────────────────────
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: almazin-windows-exe
-          path: windows-exe.zip
+          name: ${{ steps.version.outputs.artifact }}
+          path: ${{ steps.version.outputs.zipPath }}
           retention-days: 30
 
-      # ── Version ──────────────────────────────────────────────────────────
-      - name: Determine release version
-        id: version
-        shell: pwsh
-        run: |
-          $ref = "${{ github.ref }}"
-          if ($ref -match "^refs/tags/v") {
-            $tag = "${{ github.ref_name }}"
-            $name = "Almazin App $tag"
-            $prerelease = "false"
-          } else {
-            $date = Get-Date -Format "yyyyMMdd-HHmmss"
-            $sha = "${{ github.sha }}".Substring(0, 7)
-            $tag = "nightly-$date"
-            $name = "Almazin App · Nightly · $sha · $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
-            $prerelease = "true"
-          }
-          echo "tag=$tag"         >> $env:GITHUB_OUTPUT
-          echo "name=$name"       >> $env:GITHUB_OUTPUT
-          echo "prerelease=$prerelease" >> $env:GITHUB_OUTPUT
-
-      # ── Release ─────────────────────────────────────────────────────────
+      # ── Create Release ───────────────────────────────────────────────────
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.name }}
-          body: |
-            ## Almazin App — Windows Build
-
-            | Field | Value |
-            |-------|-------|
-            | Branch | `${{ github.ref_name }}` |
-            | Commit | ${{ github.sha }} |
-            | Build  | ${{ steps.version.outputs.name }} |
-
-            ### 📥 Download
-            - [`windows-exe.zip`](./windows-exe.zip) — Portable Windows executable
-
-            ### ⚙️ Requirements
-            - Windows 10+ (64-bit)
-            - [Microsoft Visual C++ Redistributable](https://aka.ms/vcredist)
-            - No installation required — unzip and run `almazin_app.exe`
-
-            ### 💾 Local Data
-            - Customer records, coffee prices, and blends stored locally via Hive
-            - Use **Settings → Backup** to export/import JSON backups
-          files: windows-exe.zip
+          body_path: release-notes.md
+          files: ${{ steps.version.outputs.zipPath }}
           draft: false
           prerelease: ${{ steps.version.outputs.prerelease }}
