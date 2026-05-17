@@ -177,11 +177,15 @@ jobs:
         run: |
           $installerVersion = "${{ steps.version.outputs.installerVersion }}"
           $releaseLabel = "${{ steps.version.outputs.tag }}"
+          
           & installer/build-installer.ps1 -InstallerVersion $installerVersion -ReleaseLabel $releaseLabel
+          
           if ($LASTEXITCODE -ne 0) {
-            Write-Error "Installer build failed"
-            exit 1
+              Write-Error "Installer build failed with exit code: $LASTEXITCODE"
+              exit $LASTEXITCODE
           }
+          
+          Write-Host "Installer built successfully" -ForegroundColor Green
 
       # ── Rename installer output ──────────────────────────────────────────
       - name: Rename installer
