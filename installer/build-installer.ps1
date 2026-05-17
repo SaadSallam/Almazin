@@ -127,29 +127,36 @@ $arguments = @(
 
 Write-Host "  Running: $iscc $arguments" -ForegroundColor Gray
 
-$process = Start-Process -FilePath $iscc -ArgumentList $arguments -NoNewWindow -Wait -PassThru
+$process = Start-Process `
+    -FilePath $iscc `
+    -ArgumentList $arguments `
+    -Wait `
+    -PassThru `
+    -NoNewWindow
 
 if ($process.ExitCode -ne 0) {
-    Write-Error "Inno Setup compilation failed with exit code $($process.ExitCode)"
+    Write-Error "Installer build failed with exit code: $($process.ExitCode)"
+    exit $process.ExitCode
+}
+
+$installerFile = Get-ChildItem -Path $outputDir -Filter "Almazin-Setup-*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+$installerPath = if ($installerFile) { $installerFile.FullName } else { $null }
+
+if (-not $installerPath -or -not (Test-Path $installerPath)) {
+    Write-Error "Installer file missing after compile"
     exit 1
 }
 
-# ── Verify output ────────────────────────────────────────────────────────────
-$setupExe = Get-ChildItem -Path $outputDir -Filter "Almazin-Setup-*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
-
-if (-not $setupExe) {
-    Write-Error "Installer output not found in: $outputDir"
-    exit 1
-}
-
-$size = [math]::Round($setupExe.Length / 1MB, 2)
+$size = [math]::Round((Get-Item $installerPath).Length / 1MB, 2)
 
 Write-Host ""
 Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host " Installer built successfully!" -ForegroundColor Green
 Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host " File: $($setupExe.Name)" -ForegroundColor Yellow
+Write-Host " File: $(Split-Path $installerPath -Leaf)" -ForegroundColor Yellow
 Write-Host " Size: $size MB" -ForegroundColor Yellow
-Write-Host " Path: $($setupExe.FullName)" -ForegroundColor Yellow
+Write-Host " Path: $installerPath" -ForegroundColor Yellow
 Write-Host ""
+
+exit 0
