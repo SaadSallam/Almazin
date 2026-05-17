@@ -129,6 +129,16 @@ jobs:
 
           $zipSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
 
+          # Generate numeric installer version (MAJOR.MINOR.PATCH.BUILD)
+          $buildNumber = Get-Date -Format "yyyyMMddHHmm"
+          if ($ref -match "^refs/tags/v") {
+            # For stable releases: 1.0.0.YYYYMMDDHHMM
+            $installerVersion = "1.0.0.$buildNumber"
+          } else {
+            # For nightly: 0.0.1.YYYYMMDDHHMM
+            $installerVersion = "0.0.1.$buildNumber"
+          }
+
           echo "tag=$tag"               >> $env:GITHUB_OUTPUT
           echo "name=$name"             >> $env:GITHUB_OUTPUT
           echo "artifact=$artifactName" >> $env:GITHUB_OUTPUT
@@ -138,6 +148,7 @@ jobs:
           echo "buildTime=$buildTime"   >> $env:GITHUB_OUTPUT
           echo "releaseType=$releaseType" >> $env:GITHUB_OUTPUT
           echo "prerelease=$prerelease" >> $env:GITHUB_OUTPUT
+          echo "installerVersion=$installerVersion" >> $env:GITHUB_OUTPUT
 
           Write-Host "`nPackaged: $zipPath ($zipSize MB) ✓"
 
@@ -156,8 +167,9 @@ jobs:
       - name: Build Windows installer
         shell: pwsh
         run: |
-          $version = "${{ steps.version.outputs.tag }}"
-          & installer/build-installer.ps1 -Version $version
+          $installerVersion = "${{ steps.version.outputs.installerVersion }}"
+          $releaseLabel = "${{ steps.version.outputs.tag }}"
+          & installer/build-installer.ps1 -InstallerVersion $installerVersion -ReleaseLabel $releaseLabel
           if ($LASTEXITCODE -ne 0) {
             Write-Error "Installer build failed"
             exit 1

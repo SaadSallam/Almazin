@@ -11,7 +11,10 @@
 
 param(
     [Parameter(Mandatory = $true)]
-    [string]$Version,
+    [string]$InstallerVersion,
+
+    [Parameter(Mandatory = $true)]
+    [string]$ReleaseLabel,
 
     [Parameter(Mandatory = $false)]
     [string]$BuildDir = "build/windows/x64/runner/Release"
@@ -30,7 +33,8 @@ Write-Host "==================================================" -ForegroundColor
 Write-Host " Almazin App — Installer Build" -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host " Version:    $Version" -ForegroundColor Yellow
+Write-Host " Release Label: $ReleaseLabel" -ForegroundColor Yellow
+Write-Host " Installer Version (numeric): $InstallerVersion" -ForegroundColor Yellow
 Write-Host " Build dir:  $BuildDir" -ForegroundColor Yellow
 Write-Host " Output:     $outputDir" -ForegroundColor Yellow
 Write-Host ""
@@ -116,7 +120,8 @@ if (Test-Path $outputDir) {
 
 # Run Inno Setup compiler
 $arguments = @(
-    "/DMyAppVersion=$Version",
+    "/DMyAppVersion=$ReleaseLabel",
+    "/DMyAppVersionNumeric=$InstallerVersion",
     "`"$issScript`""
 )
 

@@ -21,25 +21,29 @@
 #define MyAppIcon "app_icon.ico"
 
 ; Version is passed from CI via command line:
-;   /DMyAppVersion=1.0.0
+;   /DMyAppVersion=nightly-20260517-1259 (for release name)
+;   /DMyAppVersionNumeric=1.0.0.202605171259 (for Windows version info)
 #ifndef MyAppVersion
   #define MyAppVersion "1.0.0"
+#endif
+#ifndef MyAppVersionNumeric
+  #define MyAppVersionNumeric "1.0.0.0"
 #endif
 
 [Setup]
 ; ── App Identity ─────────────────────────────────────────────────────────────
 AppId={{A7B3C9D1-E2F4-5A6B-8C9D-0E1F2A3B4C5D}
 AppName={#MyAppName}
-AppVersion={#MyAppVersion}
+AppVersion={#MyAppVersionNumeric}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-VersionInfoVersion={#MyAppVersion}
+VersionInfoVersion={#MyAppVersionNumeric}
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription=Almazin App — Coffee Blend Management
 VersionInfoProductName=Almazin App
-VersionInfoProductVersion={#MyAppVersion}
+VersionInfoProductVersion={#MyAppVersionNumeric}
 
 ; ── Installation ─────────────────────────────────────────────────────────────
 DefaultDirName={localappdata}\Almazin
@@ -47,7 +51,7 @@ DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputDir=output
-OutputBaseFilename=Almazin-Setup-v{#MyAppVersion}
+OutputBaseFilename=Almazin-Setup-{#MyAppVersion}
 SetupIconFile={#MyAppIcon}
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
