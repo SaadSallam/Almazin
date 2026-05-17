@@ -127,16 +127,24 @@ jobs:
             exit 1
           }
 
-          $zipSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
+$zipSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
 
-          # Generate numeric installer version (MAJOR.MINOR.PATCH.BUILD)
-          $buildNumber = Get-Date -Format "yyyyMMddHHmm"
+          # Generate numeric installer version (MAJOR.MINOR.PATCH.REVISION)
+          $utcNow = [DateTime]::UtcNow
+          $timePart = $utcNow.TimeOfDay.TotalMilliseconds
+          
+          # Unique seed per build: Combine date and milliseconds
+          $revisionBase = [int](($utcNow.DayOfYear * 1000 + $timePart) -as [int])
+          
+          # Ensure uniqueness with microsecond component and random padding
+          $revision = ($revisionBase + (Get-Random -Minimum 0 -Maximum 100)) % 65535
+          
           if ($ref -match "^refs/tags/v") {
-            # For stable releases: 1.0.0.YYYYMMDDHHMM
-            $installerVersion = "1.0.0.$buildNumber"
+            # For stable releases: 1.0.0.REVISION
+            $installerVersion = "1.0.0.$revision"
           } else {
-            # For nightly: 0.0.1.YYYYMMDDHHMM
-            $installerVersion = "0.0.1.$buildNumber"
+            # For nightly: 0.1.0.REVISION
+            $installerVersion = "0.1.0.$revision"
           }
 
           echo "tag=$tag"               >> $env:GITHUB_OUTPUT
