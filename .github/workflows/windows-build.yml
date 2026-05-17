@@ -6,7 +6,8 @@
 #   - Tag v*.*.*     → stable release (Latest)
 #
 # Output:
-#   - Almazin-App-{version}-windows-x64.zip
+#   - Almazin-Setup-{version}.exe (installer)
+#   - Almazin-App-{version}-windows-x64.zip (portable)
 #   - Professional GitHub Release with structured notes
 # =============================================================================
 
@@ -89,7 +90,7 @@ jobs:
           Get-ChildItem -Path $releasePath | Select-Object Name, Length, LastWriteTime
           Write-Host "`nBuild verification passed ✓"
 
-      # ── Version & Artifact Name ──────────────────────────────────────────
+      # ── Version & Artifact Names ─────────────────────────────────────────
       - name: Determine release version
         id: version
         shell: pwsh
@@ -100,6 +101,7 @@ jobs:
             $tag = "${{ github.ref_name }}"
             $name = "Almazin App $tag"
             $artifactName = "Almazin-App-${tag}-windows-x64.zip"
+            $setupName = "Almazin-Setup-${tag}.exe"
             $prerelease = "false"
             $releaseType = "Stable Release"
           } else {
@@ -108,6 +110,7 @@ jobs:
             $tag = "nightly-$date"
             $name = "Almazin App · Nightly · $sha"
             $artifactName = "Almazin-App-nightly-$date-windows-x64.zip"
+            $setupName = "Almazin-Setup-nightly-$date.exe"
             $prerelease = "true"
             $releaseType = "Nightly Build"
           }
@@ -115,7 +118,7 @@ jobs:
           $buildTime = Get-Date -Format "yyyy-MM-dd HH:mm UTC"
           $zipPath = $artifactName
 
-          # Package
+          # Package portable ZIP
           $sourcePath = "build/windows/x64/runner/Release"
           Compress-Archive -Path "$sourcePath\*" -DestinationPath $zipPath -Force
 
@@ -124,18 +127,64 @@ jobs:
             exit 1
           }
 
-          $size = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
+          $zipSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
 
           echo "tag=$tag"               >> $env:GITHUB_OUTPUT
           echo "name=$name"             >> $env:GITHUB_OUTPUT
           echo "artifact=$artifactName" >> $env:GITHUB_OUTPUT
+          echo "setupName=$setupName"   >> $env:GITHUB_OUTPUT
           echo "zipPath=$zipPath"       >> $env:GITHUB_OUTPUT
-          echo "zipSize=$size"          >> $env:GITHUB_OUTPUT
+          echo "zipSize=$zipSize"       >> $env:GITHUB_OUTPUT
           echo "buildTime=$buildTime"   >> $env:GITHUB_OUTPUT
           echo "releaseType=$releaseType" >> $env:GITHUB_OUTPUT
           echo "prerelease=$prerelease" >> $env:GITHUB_OUTPUT
 
-          Write-Host "`nPackaged: $zipPath ($size MB) ✓"
+          Write-Host "`nPackaged: $zipPath ($zipSize MB) ✓"
+
+      # ── Install Inno Setup ───────────────────────────────────────────────
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress --yes
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to install Inno Setup"
+            exit 1
+          }
+          Write-Host "Inno Setup installed ✓"
+
+      # ── Build Installer ──────────────────────────────────────────────────
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.tag }}"
+          & installer/build-installer.ps1 -Version $version
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Installer build failed"
+            exit 1
+          }
+
+      # ── Rename installer output ──────────────────────────────────────────
+      - name: Rename installer
+        id: renameinstaller
+        shell: pwsh
+        run: |
+          $setupName = "${{ steps.version.outputs.setupName }}"
+          $outputDir = "installer/output"
+          $setupExe = Get-ChildItem -Path $outputDir -Filter "Almazin-Setup-*.exe" | Select-Object -First 1
+
+          if (-not $setupExe) {
+            Write-Error "Installer output not found in $outputDir"
+            exit 1
+          }
+
+          $destPath = Join-Path (Get-Location) $setupName
+          Move-Item -Path $setupExe.FullName -Destination $destPath -Force
+
+          $size = [math]::Round((Get-Item $destPath).Length / 1MB, 2)
+          echo "setupPath=$setupName" >> $env:GITHUB_OUTPUT
+          echo "setupSize=$size" >> $env:GITHUB_OUTPUT
+
+          Write-Host "`nInstaller: $setupName ($size MB) ✓"
 
       # ── Generate Changelog ───────────────────────────────────────────────
       - name: Generate changelog
@@ -147,6 +196,7 @@ jobs:
           $tag = "${{ steps.version.outputs.tag }}"
           $buildTime = "${{ steps.version.outputs.buildTime }}"
           $zipSize = "${{ steps.version.outputs.zipSize }}"
+          $setupSize = "${{ steps.renameinstaller.outputs.setupSize }}"
           $releaseType = "${{ steps.version.outputs.releaseType }}"
 
           # Get recent commits
@@ -165,22 +215,24 @@ jobs:
           | Build Time | $buildTime |
           | Commit | \`$sha\` |
           | Branch | \`$ref\` |
-          | Package Size | $zipSize MB |
 
-          ### 📥 Download
+          ### 📥 Downloads
 
-          - **File:** \`${{ steps.version.outputs.artifact }}\`
-          - **Contents:** Portable Windows executable — no installation required
+          | File | Size | Description |
+          |------|------|-------------|
+          | **Almazin-Setup** | $setupSize MB | Installer — Start Menu, Desktop shortcut, auto-updates ready |
+          | **Portable ZIP** | $zipSize MB | No installation — unzip and run |
 
           ### ⚠️ Requirements
 
           - Windows 10 or Windows 11 (64-bit)
           - [Microsoft Visual C++ Redistributable](https://aka.ms/vcredist)
-          - No additional installation required — unzip and run \`almazin_app.exe\`
+          - No additional installation required
 
           ### 💾 Local Data & Backup
 
           - All data (customers, prices, blends) stored locally via Hive
+          - Data is preserved during reinstall/upgrade
           - Use **Settings → Backup** to export/import JSON backups
           - No cloud sync — your data stays on your machine
 
@@ -195,12 +247,19 @@ jobs:
           $notes | Out-File -FilePath release-notes.md -Encoding utf8
           Write-Host "Release notes generated ✓"
 
-      # ── Upload artifact (fallback) ───────────────────────────────────────
-      - name: Upload build artifact
+      # ── Upload artifacts (fallback) ──────────────────────────────────────
+      - name: Upload portable artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.version.outputs.artifact }}
           path: ${{ steps.version.outputs.zipPath }}
+          retention-days: 30
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.version.outputs.setupName }}
+          path: ${{ steps.renameinstaller.outputs.setupPath }}
           retention-days: 30
 
       # ── Create Release ───────────────────────────────────────────────────
@@ -210,6 +269,8 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.name }}
           body_path: release-notes.md
-          files: ${{ steps.version.outputs.zipPath }}
+          files: |
+            ${{ steps.version.outputs.zipPath }}
+            ${{ steps.renameinstaller.outputs.setupPath }}
           draft: false
           prerelease: ${{ steps.version.outputs.prerelease }}

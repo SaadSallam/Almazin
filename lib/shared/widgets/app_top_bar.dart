@@ -11,6 +11,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   const AppTopBar({
     super.key,
     required this.title,
+    this.leading,
     this.actions = const [],
     this.showTabletSidebarToggle = false,
     this.tabletSidebarExpanded = true,
@@ -19,6 +20,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   final String title;
+  final Widget? leading;
   final List<Widget> actions;
   final bool showTabletSidebarToggle;
   final bool tabletSidebarExpanded;
@@ -35,6 +37,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
 
     return AppBar(
       titleSpacing: AppSpacing.lg,
+      leading: leading,
       title: Text(
         title,
         maxLines: 1,

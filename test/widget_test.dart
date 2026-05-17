@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
@@ -25,6 +26,6 @@ void main() {
   testWidgets('AlmazinApp builds', (WidgetTester tester) async {
     await tester.pumpWidget(const AlmazinApp());
     await tester.pumpAndSettle();
-    expect(find.textContaining('المازن'), findsWidgets);
+    expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

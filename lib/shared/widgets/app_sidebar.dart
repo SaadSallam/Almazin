@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_strings.dart';
 import '../../core/navigation/app_nav.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
@@ -64,7 +65,7 @@ class AppSidebar extends StatelessWidget {
                         const SizedBox(width: AppSpacing.md),
                         Expanded(
                           child: Text(
-                            'المازن',
+                            AppStrings.brandName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: textTheme.titleLarge?.copyWith(
@@ -149,7 +150,7 @@ class AppNavigationDrawer extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'المازن',
+                        AppStrings.brandName,
                         style: textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),

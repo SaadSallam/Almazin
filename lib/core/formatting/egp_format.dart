@@ -12,3 +12,6 @@ abstract final class EgpFormat {
     return DateFormat.yMMMd('ar').add_Hm().format(local);
   }
 }
+
+/// Convenience alias — no need to type [EgpFormat.pricePerKilogram].
+String formatEgp(double value) => EgpFormat.pricePerKilogram(value);

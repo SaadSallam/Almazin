@@ -23,6 +23,8 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final path = GoRouterState.of(context).uri.path;
     final title = appPageTitleForLocation(path);
+    final router = GoRouter.of(context);
+    final canPop = router.canPop();
 
     final isMobile = context.isMobile;
     final isTablet = context.isTablet;
@@ -40,6 +42,13 @@ class _AppShellState extends State<AppShell> {
           : null,
       appBar: AppTopBar(
         title: title,
+        leading: canPop
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new),
+                tooltip: 'رجوع',
+                onPressed: () => router.pop(),
+              )
+            : null,
         showTabletSidebarToggle: isTablet,
         tabletSidebarExpanded: _tabletSidebarExpanded,
         onTabletSidebarToggle: () {

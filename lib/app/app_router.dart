@@ -17,6 +17,13 @@ import '../features/customers/presentation/cubit/customer_detail_cubit.dart';
 import '../features/customers/presentation/cubit/customers_list_cubit.dart';
 import '../features/customers/presentation/customer_detail_page.dart';
 import '../features/customers/presentation/customers_page.dart';
+import '../features/employees/data/data.dart';
+import '../features/employees/domain/employee_access_guard.dart';
+import '../features/employees/presentation/cubit/employee_detail_cubit.dart';
+import '../features/employees/presentation/cubit/employees_list_cubit.dart';
+import '../features/employees/presentation/employee_detail_page.dart';
+import '../features/employees/presentation/employees_page.dart';
+import '../features/employees/presentation/pin_lock_screen.dart';
 import '../features/settings/presentation/settings_page.dart';
 import '../shared/layout/app_shell.dart';
 
@@ -35,13 +42,28 @@ final class AppRouter {
     );
   }
 
+  static EmployeesRepositoryImpl _employeesRepository() {
+    return EmployeesRepositoryImpl(
+      EmployeesLocalDataSourceImpl(Hive.box<dynamic>(kAlmazinDataBox)),
+    );
+  }
+
   static GoRouter create() {
     return GoRouter(
       initialLocation: AppPaths.coffeePrices,
+      redirect: (context, state) =>
+          EmployeeAccessGuard.redirect(state.matchedLocation),
       routes: [
         GoRoute(
           path: '/',
           redirect: (_, _) => AppPaths.coffeePrices,
+        ),
+        GoRoute(
+          path: AppPaths.pinLock,
+          pageBuilder: (context, state) => NoTransitionPage<void>(
+            key: state.pageKey,
+            child: const PinLockScreen(),
+          ),
         ),
         ShellRoute(
           builder: (context, state, child) => AppShell(child: child),
@@ -102,6 +124,38 @@ final class AppRouter {
                   child: const CalculatorPage(),
                 ),
               ),
+            ),
+            GoRoute(
+              path: AppPaths.employees,
+              pageBuilder: (context, state) => NoTransitionPage<void>(
+                key: state.pageKey,
+                child: BlocProvider(
+                  create: (_) => EmployeesListCubit(
+                    repository: _employeesRepository(),
+                  )..load(),
+                  child: const EmployeesPage(),
+                ),
+              ),
+              routes: [
+                GoRoute(
+                  path: ':employeeId',
+                  pageBuilder: (context, state) {
+                    final employeeId = state.pathParameters['employeeId']!;
+                    final weekStart = state.extra as DateTime?;
+                    return NoTransitionPage<void>(
+                      key: state.pageKey,
+                      child: BlocProvider(
+                        create: (_) => EmployeeDetailCubit(
+                          employeeId: employeeId,
+                          repository: _employeesRepository(),
+                          weekStart: weekStart,
+                        )..load(),
+                        child: EmployeeDetailPage(employeeId: employeeId),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
             GoRoute(
               path: AppPaths.settings,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_strings.dart';
 import 'app_paths.dart';
 
 @immutable
@@ -31,6 +32,11 @@ class AppNavItem {
       icon: Icons.calculate_outlined,
     ),
     AppNavItem(
+      path: AppPaths.employees,
+      label: 'الموظفين',
+      icon: Icons.badge_outlined,
+    ),
+    AppNavItem(
       path: AppPaths.settings,
       label: 'الإعدادات',
       icon: Icons.settings_outlined,
@@ -53,5 +59,5 @@ String appPageTitleForLocation(String location) {
       return item.label;
     }
   }
-  return 'المازن';
+  return AppStrings.brandName;
 }
