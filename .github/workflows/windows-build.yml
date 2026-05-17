@@ -127,7 +127,7 @@ jobs:
             exit 1
           }
 
-$zipSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
+          $zipSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
 
           # Generate numeric installer version (MAJOR.MINOR.PATCH.REVISION)
           $utcNow = [DateTime]::UtcNow
@@ -136,7 +136,7 @@ $zipSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
           # Unique seed per build: Combine date and milliseconds
           $revisionBase = [int](($utcNow.DayOfYear * 1000 + $timePart) -as [int])
           
-          # Ensure uniqueness with microsecond component and random padding
+          # Ensure uniqueness with random padding (0-99)
           $revision = ($revisionBase + (Get-Random -Minimum 0 -Maximum 100)) % 65535
           
           if ($ref -match "^refs/tags/v") {
